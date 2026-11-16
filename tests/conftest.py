@@ -5,8 +5,6 @@ from typing import Any
 
 import pytest
 
-HOSTILE_STRINGS = ("<script>alert(1)</script>", '"><img src=x onerror=alert(1)>')
-
 
 @pytest.fixture
 def make_feature():
