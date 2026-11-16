@@ -1,0 +1,10 @@
+# Development and CI tooling. Regenerate the lock file with:
+#   pip-compile --generate-hashes --allow-unsafe --strip-extras --output-file=requirements-dev.txt requirements-dev.in
+-c requirements.txt
+-r requirements.in
+bandit
+pip-audit
+pip-tools
+pre-commit
+pytest
+ruff

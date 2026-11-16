@@ -1,0 +1,22 @@
+[project]
+name = "quakewatch"
+version = "0.1.0"
+description = "Security-hardened USGS earthquake pipeline that publishes a static dashboard."
+readme = "README.md"
+requires-python = ">=3.12"
+# Dependencies are pinned with hashes in requirements.txt (see requirements.in).
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]  # pytest uses assert
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
