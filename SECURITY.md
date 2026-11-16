@@ -31,6 +31,7 @@ Initial review, 2026-11-15. The brief asked for any existing code to be reviewed
 | 8 | Bandit B613 (Trojan Source) flagged bidi escape sequences in source. | Bidi code points are written as numbers, so the source contains none; no `# nosec`. | `quakewatch/transform.py:36` |
 | 9 | Functional: plotly.js 4 defaults `geo.fitbounds` to `"locations"`, which throws for scattergeo, and the map failed to draw. | `fitbounds=False`. | `quakewatch/dashboard.py:217` |
 | 10 | Usability: geo charts zoom on the scroll wheel, hijacking page scroll. | `scrollZoom: false`. | `quakewatch/static/app.js:8` |
+| 11 | Process: the settings checklist required one pull request approval, which a sole maintainer can never give, so `main` would be locked. Found while setting up the ruleset, 2026-11-16. | 0 approvals while there is one maintainer; every change still needs a pull request and green CI. | [Recommended GitHub settings](#recommended-github-settings), item 2 |
 
 ## Threat model
 
@@ -149,7 +150,7 @@ Documented as an alternative in [README.md](README.md#alternative-self-hosting-n
 - **What a `<meta>` CSP can't do on GitHub Pages.** No `frame-ancestors`, `X-Frame-Options`, HSTS or other custom headers. Clickjacking a read-only page has low impact; self-hosting can add these headers.
 - **`'unsafe-inline'` styles.** Required by Plotly. CSS injection would need attacker text in a style context, and no feed data goes there.
 - **Cache integrity and availability.**
-  - Any workflow running on `main` can write cache entries, so a malicious merge could plant a crafted database. This is mitigated by branch protection and review, `trusted_schema=OFF` and output escaping. A crafted file could still trigger a SQLite parser bug.
+  - Any workflow running on `main` can write cache entries, so a malicious merge could plant a crafted database. This is mitigated by the `main` ruleset (changes land only through a pull request that passes CI), `trusted_schema=OFF` and output escaping. A crafted file could still trigger a SQLite parser bug.
   - Eviction loses history older than 30 days.
 - **Trust on first use.** Several pins record what was published at the time they were made: the plotly.min.js inside the pinned wheel, the vendored topojson (from `cdn.plot.ly`), the gitleaks checksum (from its own release) and the action SHAs. Pins stop later tampering, not a bad first release. Review Dependabot bumps before merging.
 - **Known-vulnerability scanning only.** pip-audit and Dependabot alerts cover published advisories, not zero-days.
@@ -161,11 +162,10 @@ Documented as an alternative in [README.md](README.md#alternative-self-hosting-n
 These live in the repository and account settings, not in code. In priority order:
 
 1. **Two-factor authentication** on the maintainer account (Settings → Password and authentication).
-2. **Branch protection or a ruleset on `main`:**
-   - require a pull request with one approval
-   - require the CI checks to pass: *Tests and dependency audit*, *Lint and static security analysis*, *Secret scan (gitleaks)*
+2. **A ruleset on `main`** (Settings → Rules → Rulesets), with an empty bypass list so it applies to administrators too:
+   - require a pull request before merging, with **0** required approvals while there is a single maintainer. GitHub does not let you approve your own pull request, so requiring 1 locks a sole maintainer out of `main`. Raise it to 1 when a second maintainer joins.
+   - require the CI checks to pass, with branches up to date: *Tests and dependency audit*, *Lint and static security analysis*, *Secret scan (gitleaks)*. These are the job names in `ci.yml`; if a job is renamed, update the rule, or pull requests wait for a check that never reports.
    - block force pushes and deletion
-   - include administrators
 3. **Pages source: GitHub Actions** (Settings → Pages). The `github-pages` environment should allow deployments from `main` only (Settings → Environments).
 4. **Restrict Actions** (Settings → Actions → General):
    - allow only `actions/*` and actions you select (none are needed beyond `actions/*`)
