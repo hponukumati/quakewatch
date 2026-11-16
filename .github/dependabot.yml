@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # Regenerates the pip-compile lock files (with hashes) when a dependency changes.
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+  # Bumps the pinned action SHAs and their version comments.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

@@ -1,0 +1,79 @@
+name: Publish dashboard
+
+on:
+  schedule:
+    - cron: "17 */6 * * *" # every 6 hours, off the hour
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: false # queue instead of cancelling a deploy half-way
+
+jobs:
+  build:
+    # Run only in the upstream repository, never in forks.
+    if: github.repository == 'hponukumati/quakewatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install locked runtime dependencies (hash-checked)
+        run: python -m pip install --require-hashes --no-deps -r requirements.txt
+
+      # History beyond the 30-day USGS window lives in the Actions cache (see README).
+      - name: Restore earthquake history
+        id: history
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data/quakes.db
+          key: quakes-db-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: quakes-db-
+
+      - name: Fetch, validate, store and render
+        env:
+          # A cold cache seeds 30 days; after that the week feed overlaps every 6-hour run.
+          WINDOW: ${{ steps.history.outputs.cache-matched-key != '' && 'week' || 'month' }}
+        run: python -m quakewatch --source usgs --window "$WINDOW" --db data/quakes.db --out site
+
+      - name: Check the site holds only the expected files
+        run: |
+          expected="app.js figures.js geo-assets.js index.html plotly.min.js"
+          actual="$(find site -mindepth 1 -printf '%P\n' | sort | paste -sd ' ')"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::unexpected files in site/: $actual"
+            exit 1
+          fi
+
+      # Saved only after a successful run, so a failed run never replaces good history.
+      - name: Save earthquake history
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data/quakes.db
+          key: quakes-db-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

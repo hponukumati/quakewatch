@@ -7,4 +7,5 @@ pip-audit
 pip-tools
 pre-commit
 pytest
+pyyaml
 ruff
