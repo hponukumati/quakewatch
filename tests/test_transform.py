@@ -112,6 +112,12 @@ def test_missing_depth_and_updated_are_tolerated(make_feature):
     assert events.iloc[0]["depth_km"] is None
 
 
+def test_out_of_range_updated_falls_back_to_time(make_feature):
+    # A huge value would overflow SQLite's INTEGER and crash the run.
+    events, _ = transform([make_feature(time=1_790_000_000_000, updated=10**30)])
+    assert events.iloc[0]["updated_ms"] == 1_790_000_000_000
+
+
 @pytest.mark.parametrize(
     ("place", "region"),
     [
