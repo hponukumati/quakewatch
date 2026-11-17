@@ -7,9 +7,11 @@ QuakeWatch is an automated earthquake data pipeline. Every six hours, a GitHub A
 3. stores it in SQLite, keeping history beyond the 30 days USGS publishes,
 4. publishes an interactive dashboard to GitHub Pages as a static site.
 
+**Live dashboard: <https://hponukumati.github.io/quakewatch/>** (refreshed about every 6 hours).
+
 Security is a first-class requirement. All upstream data is treated as untrusted, the published page runs under a strict Content-Security-Policy and makes no third-party requests, and CI uses least-privilege tokens, SHA-pinned actions, hash-pinned dependencies and no secrets. The threat model and the requirement-by-requirement mapping are in [SECURITY.md](SECURITY.md).
 
-> **Screenshot:** _placeholder. Add `docs/screenshot.png` after the first live deploy._
+![QuakeWatch dashboard: header stats, events per day, magnitude distribution and a world map of the last 30 days of earthquakes](docs/screenshot.png)
 
 ## Architecture
 
@@ -204,6 +206,7 @@ quakewatch/            package (sources, transform, store, dashboard, pipeline)
   static/app.js        chart render code (external, CSP-safe)
   assets/              vendored world_110m topojson (SHA-256 pinned)
 tests/                 pytest suite, fully offline
+docs/screenshot.png    the dashboard image above
 .github/workflows/     ci.yml (tests, audit, lint, secrets) and pages.yml (scheduled publish)
 requirements*.in/.txt  direct deps and hash-pinned lock files
 ```

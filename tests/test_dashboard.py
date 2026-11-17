@@ -94,6 +94,13 @@ def test_hostile_strings_are_escaped_everywhere(tmp_path, make_feature, assert_i
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in figures  # Plotly hover text
 
 
+def test_chart_titles_fit_a_phone_screen(make_feature):
+    # At 15px a title takes about 7px per character, and a phone-width chart is about 340px.
+    events, _ = transform([make_feature()])
+    figures = (dashboard._daily_figure, dashboard._magnitude_figure, dashboard._map_figure)
+    assert all(len(make(events).layout.title.text) <= 40 for make in figures)
+
+
 def test_escape_text_is_the_chart_choke_point():
     assert dashboard.escape_text(['<a href="x">', "R&D", 4.5]) == [
         '&lt;a href="x"&gt;',
