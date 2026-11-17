@@ -208,9 +208,7 @@ def _map_figure(recent: pd.DataFrame) -> go.Figure:
             "opacity": 0.85,
         },
     )
-    figure = go.Figure(
-        points, _layout(f"Earthquakes, last {RECENT_DAYS} days (size and color = magnitude)")
-    )
+    figure = go.Figure(points, _layout(f"Earthquakes by magnitude, last {RECENT_DAYS} days"))
     figure.update_layout(height=520, margin={"l": 0, "r": 0, "t": 48, "b": 0})
     figure.update_geos(
         projection_type="natural earth",

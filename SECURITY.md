@@ -23,13 +23,13 @@ Initial review, 2026-11-15. The brief asked for any existing code to be reviewed
 | --- | --- | --- | --- |
 | 1 | Repository was empty; no code, tests or CI to review. | Built from scratch against the brief; every requirement is mapped below. | (whole repo) |
 | 2 | **Known issue from the brief:** the dashboard header built HTML with an f-string and inserted feed `place` text unescaped (stored XSS). No such code existed here. | Prevented by design: the page is a Jinja2 template with `autoescape=True`, and Plotly text goes through one `html.escape` choke point. Regression tests send `<script>alert(1)</script>` and `"><img src=x onerror=alert(1)>` through the full pipeline. | `quakewatch/dashboard.py:46`, `:50`; `tests/test_pipeline.py::test_hostile_feed_strings_render_inert` |
-| 3 | plotly.js fetches map outlines from `cdn.plot.ly` at runtime: a third-party request, blocked by `connect-src 'none'`. | Vendored `world_110m.json`, pinned by SHA-256, and preloaded into `window.PlotlyGeoAssets` from a local script. | `quakewatch/dashboard.py:40`, `:231` |
+| 3 | plotly.js fetches map outlines from `cdn.plot.ly` at runtime: a third-party request, blocked by `connect-src 'none'`. | Vendored `world_110m.json`, pinned by SHA-256, and preloaded into `window.PlotlyGeoAssets` from a local script. | `quakewatch/dashboard.py:40`, `:229` |
 | 4 | Plotly's standard HTML output uses an inline `<script>`, which `script-src 'self'` blocks. | Figure JSON goes to `figures.js` and render code to `app.js`; the page has zero inline scripts. | `quakewatch/dashboard.py:80`; `quakewatch/static/app.js` |
 | 5 | Plotly hover text decodes `&lt; &gt; &amp;` but shows `&quot;` literally. | Chart text uses `html.escape(quote=False)`. This is safe because `<` is always escaped, so no tag or attribute can form. The page template still escapes quotes. | `quakewatch/dashboard.py:57` |
 | 6 | A huge `updated` value from the feed would overflow SQLite's INTEGER and crash the run (denial of service by data). | `updated` is bounded like `time`; out-of-range values fall back to the event time. | `quakewatch/transform.py:132`; `tests/test_transform.py::test_out_of_range_updated_falls_back_to_time` |
 | 7 | `gitleaks-action` needs `GITHUB_TOKEN` (and a license for organizations), which conflicts with "no secrets". | CI downloads the gitleaks release binary pinned by version and SHA-256 and runs it directly. | `.github/workflows/ci.yml:64-81` |
 | 8 | Bandit B613 (Trojan Source) flagged bidi escape sequences in source. | Bidi code points are written as numbers, so the source contains none; no `# nosec`. | `quakewatch/transform.py:36` |
-| 9 | Functional: plotly.js 4 defaults `geo.fitbounds` to `"locations"`, which throws for scattergeo, and the map failed to draw. | `fitbounds=False`. | `quakewatch/dashboard.py:217` |
+| 9 | Functional: plotly.js 4 defaults `geo.fitbounds` to `"locations"`, which throws for scattergeo, and the map failed to draw. | `fitbounds=False`. | `quakewatch/dashboard.py:215` |
 | 10 | Usability: geo charts zoom on the scroll wheel, hijacking page scroll. | `scrollZoom: false`. | `quakewatch/static/app.js:8` |
 
 ## Threat model
@@ -108,7 +108,7 @@ Line numbers are as of the initial commit series.
 | No unpinned CDN; bundle Plotly | `dashboard.py:83` copies `plotly.min.js` from the hash-pinned `plotly` wheel | `tests/test_dashboard.py::test_plotly_is_bundled_locally` |
 | Strict CSP via `<meta>` | `templates/index.html.j2:6` matches `dashboard.py:32` exactly, with no changes from the brief's policy | `::test_page_has_strict_csp_and_no_referrer` |
 | No inline scripts | External `figures.js` and `app.js`, loaded with `defer` (`index.html.j2:38-41`) | `assert_inert_page` in `tests/conftest.py` |
-| `referrer` no-referrer; no analytics, fonts or trackers | `index.html.j2:7`; system font stack; map outlines served locally (`dashboard.py:231`) | `::test_page_makes_no_third_party_requests`, `::test_geo_assets_preload_world_topojson` |
+| `referrer` no-referrer; no analytics, fonts or trackers | `index.html.j2:7`; system font stack; map outlines served locally (`dashboard.py:229`) | `::test_page_makes_no_third_party_requests`, `::test_geo_assets_preload_world_topojson` |
 | `site/` holds only what the page needs | `dashboard.py:36` (`SITE_FILES`); `pipeline.py:29` refuses a `--db` inside `--out`; `pages.yml:49` lists the site files and fails on anything else | `tests/test_pipeline.py::test_sample_run_end_to_end`, `::test_database_inside_output_dir_is_refused` |
 
 **CSP notes:**
